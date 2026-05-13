@@ -1,11 +1,12 @@
 ---
 import { toPascalCase } from "../../js/helpers/helpers";
+// CREATE COLLECTION OF TEMPLATES TO TRACK FOR CHANGES
 const templates = import.meta.glob('../modules/*.astro', { eager: true });
 
 // GET BLOCK DATA
 const { blocks } = Astro.props;
 
-
+// Function to dynamically load a template file
 async function resolveTemplate(contentType: string) {
 	const name = toPascalCase(contentType);
 	const path = `../modules/${name}.astro`;
@@ -14,10 +15,12 @@ async function resolveTemplate(contentType: string) {
 	return module.default;
 }
 
+// DYNAMICALLY LOAD TEMPLATE(S)
 const Templates = await Promise.all(
 	blocks.map((block) => resolveTemplate(block?.content?.contentType))
 );
 ---
+
 {blocks.map((block, i) => {
 	const Template = Templates[i];
 	return Template ? <Template model={block} /> : <Fragment>Missing template for {block?.content?.contentType}</Fragment>

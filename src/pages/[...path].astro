@@ -1,8 +1,6 @@
 ---
 import { fetchContent, fetchItem } from "@/lib/Umbraco.Query";
 import Layout from "@/Templates/layouts/Layout.astro";
-// import { toPascalCase } from "@/js/helpers/helpers";
-// const templates = import.meta.glob('../Templates/pages/*.astro', { eager: true });
 import TemplateLoop from "@/Templates/layouts/TemplateLoop.astro";
 
 export const prerender = import.meta.env.PRERENDER === 'true';
@@ -42,27 +40,13 @@ export async function getStaticPaths() {
 	});
 }
 
-// CREATE MODEL DATA
+// CREATE MODEL DATA (Required for local server rendering as getStaticPaths props will not be created)
 let model = import.meta.env.PRERENDER === 'true' ? Astro.props.item : await fetchItem(Astro.params.path, ["fields=properties[$all]"]);
+
+// Fallback to 404
 if (!model) return Astro.redirect('/404');
-
-// // TEMPLATE LOOP
-// async function resolveTemplate(contentType: string) {
-// 	const name = toPascalCase(contentType);
-// 	const path = `../Templates/pages/${name}.astro`;
-// 	const module = templates[path] as { default: unknown } | undefined;
-// 	if (!module) throw new Error(`Template not found for content type "${contentType}" — expected ${path}`);
-// 	return module.default;
-// }
-
-// // GET TEMPLATE
-// const Template = await resolveTemplate(model.contentType);
 
 ---
 <Layout {model}>
-	{model ? (
-		<TemplateLoop {model}/>
-	) : (
-		<Fragment>Missing Model for {model?.contentType}</Fragment>
-	)}
+	<TemplateLoop {model}/>
 </Layout>
