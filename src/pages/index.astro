@@ -2,6 +2,9 @@
 import { fetchItem } from "@/lib/Umbraco.Query";
 import Layout from "@/Templates/layouts/Layout.astro";
 import Home from "@/Templates/pages/Home.astro";
+
+export const prerender = import.meta.env.PRERENDER === 'true';
+
 const model = await fetchItem("/", ["expand=properties[$all]"]);
 ---
 <Layout {model}>

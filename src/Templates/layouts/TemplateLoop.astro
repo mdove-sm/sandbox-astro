@@ -1,5 +1,6 @@
 ---
 import { toPascalCase } from "../../js/helpers/helpers";
+import {resolveTemplate} from "@/lib/Astro.Helpers";
 // CREATE COLLECTION OF TEMPLATES TO TRACK FOR CHANGES
 const templates = import.meta.glob('../pages/*.astro', { eager: true });
 
@@ -16,7 +17,7 @@ async function resolveTemplate(contentType: string) {
 }
 
 // DYNAMICALLY LOAD TEMPLATE
-const Template = await resolveTemplate(model.contentType);
+const Template = await resolveTemplate(model.contentType, "../pages");
 ---
 
 {Template ? (
