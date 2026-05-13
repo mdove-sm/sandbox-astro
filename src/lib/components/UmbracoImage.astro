@@ -1,0 +1,114 @@
+---
+import { addUmbracoHmac } from "@/lib/Umbraco.Media";
+interface CropCoordinates { x1: number; y1: number; x2: number; y2: number; }
+interface UmbracoCrop { alias: string; width: number; height: number; coordinates?: CropCoordinates; }
+interface UmbracoImage { url: string; width: number; height: number; name: string; focalPoint?: { left: number; top: number }; crops: UmbracoCrop[]; }
+
+interface Props {
+	image?: UmbracoImage;
+	width?: number;
+	sizes?: string;
+	alt?: string;
+	crop?: string;
+	loading?: "lazy" | "eager";
+}
+
+const { image, width, sizes, alt, crop, loading} = Astro.props;
+
+if(!image?.url) return;
+
+const srcSizes = [100, 200, 320, 480, 640, 768, 960, 1024, 1280, 1440, 1920, 2560, 3200, 3500];
+let height: number | null = null;
+let srcSet: string[] = [];
+
+
+function getSrc(image: UmbracoImage, width: number, crop: string | undefined): string {
+
+	const resolvedCrop = crop ? image.crops.find((x) => x.alias == crop) ?? null : null;
+
+	let ratio = {
+		x: resolvedCrop ? resolvedCrop.width : image.width,
+		y: resolvedCrop ? resolvedCrop.height : image.height
+	}
+
+	height = Math.round(width * (ratio.y / ratio.x));
+
+
+	const rxyString = resolvedCrop ? getFocalPoint(image, resolvedCrop) : null;
+
+	return addUmbracoHmac(`${import.meta.env.PUBLIC_MEDIA_DOMAIN}${image.url}?${rxyString ? "cc=" + rxyString + "&": ""}width=${width}&height=${height}`);
+}
+
+srcSizes.forEach(size => {
+	let url = getSrc(image, size, crop);
+	srcSet.push(`${url} ${size}w`);
+})
+
+
+
+function getFocalPoint(image: UmbracoImage, crop: UmbracoCrop): string {
+
+	const focalPoint = image?.focalPoint || { left: 0.5, top: 0.5 };
+
+	let rxy = { x1: 0, y1: 0, x2: 0, y2: 0 };
+
+
+	if (crop?.coordinates) {
+		rxy = crop.coordinates;
+	} else {
+		const imageWidth = image.width;
+		const imageHeight = image.height;
+		const cropAspect = crop.width / crop.height;
+
+		// Calculate the crop dimensions in pixels, constrained to the source image
+		let cropW, cropH;
+		if (imageWidth / imageHeight > cropAspect) {
+			// Image is wider than crop aspect — fit height, derive width
+			cropH = imageHeight;
+			cropW = cropH * cropAspect;
+		} else {
+			// Image is taller than crop aspect — fit width, derive height
+			cropW = imageWidth;
+			cropH = cropW / cropAspect;
+		}
+
+		// Calculate ideal crop origin (in pixels) to centre the focal point
+		const focalX = focalPoint.left * imageWidth;
+		const focalY = focalPoint.top * imageHeight;
+
+		let x1px = focalX - cropW / 2;
+		let y1px = focalY - cropH / 2;
+
+		// Clamp so the crop doesn't exceed image bounds
+		x1px = Math.max(0, Math.min(x1px, imageWidth - cropW));
+		y1px = Math.max(0, Math.min(y1px, imageHeight - cropH));
+
+		const x2px = x1px + cropW;
+		const y2px = y1px + cropH;
+
+		// Convert pixel positions to the 0–1 coordinate space Umbraco expects
+		// x1/y1 = distance from top-left, x2/y2 = distance from bottom-right
+		rxy = {
+			x1: x1px / imageWidth,
+			y1: y1px / imageHeight,
+			x2: 1 - (x2px / imageWidth),
+			y2: 1 - (y2px / imageHeight),
+		};
+	}
+	return `${rxy.x1},${rxy.y1},${rxy.x2},${rxy.y2}`;
+}
+
+---
+
+{image?.url &&
+	<img
+		alt={alt || image.name}
+		src={getSrc(image, width ?? image.width, crop)}
+		width={width || image.width}
+		height={height || image.height}
+		// srcset={srcSet.join(",")}
+		sizes={sizes || null}
+		loading={loading ||"lazy"}
+		decoding="async"
+	/>
+}

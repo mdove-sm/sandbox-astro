@@ -1,0 +1,26 @@
+---
+import { toPascalCase } from "../../js/helpers/helpers";
+const templates = import.meta.glob('../pages/*.astro', { eager: true });
+
+// GET MODEL DATA
+const { model } = Astro.props;
+
+async function resolveTemplate(contentType: string) {
+	const name = toPascalCase(contentType);
+	const path = `../pages/${name}.astro`;
+	const module = templates[path] as { default: unknown } | undefined;
+	if (!module) throw new Error(`Template not found for content type "${contentType}" — expected ${path}`);
+	return module.default;
+}
+
+// GET TEMPLATE
+const Template = await resolveTemplate(model.contentType);
+---
+
+{Template ? (
+		<Template {model} />
+	) : (
+		<Fragment>Missing template for {model?.contentType}</Fragment>
+	)}
+
+

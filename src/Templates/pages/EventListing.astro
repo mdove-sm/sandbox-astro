@@ -1,0 +1,13 @@
+---
+import type { EventListingContentResponseModel } from "@/types";
+// import BlocklistLoop from "../layouts/BlocklistLoop.astro";
+
+interface Props {
+	model: EventListingContentResponseModel;
+}
+
+const { model } = Astro.props;
+---
+<h1>{model.name} Page</h1>
+<h2>{model.contentType} Template</h2>
+<!-- {model.properties?.modules?.items?.length && <BlocklistLoop blocks={model.properties.modules} />} -->

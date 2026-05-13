@@ -1,0 +1,68 @@
+---
+import { fetchContent, fetchItem } from "@/lib/Umbraco.Query";
+import Layout from "@/Templates/layouts/Layout.astro";
+// import { toPascalCase } from "@/js/helpers/helpers";
+// const templates = import.meta.glob('../Templates/pages/*.astro', { eager: true });
+import TemplateLoop from "@/Templates/layouts/TemplateLoop.astro";
+
+export const prerender = import.meta.env.PRERENDER === 'true';
+
+// GET STATIC PATHS
+export async function getStaticPaths() {
+	// console.log("GET STATIC PATHS", test);
+	const includeTypes = [
+		"article",
+		"articleListing",
+		"document",
+		"documentListing",
+		"event",
+		"eventListing",
+		"job",
+		"jobListing",
+		"landingPage",
+		"profile",
+		"profileListing",
+		"servicePage",
+		"standardPage",
+	];
+
+	const data = await fetchContent(
+		[
+			`filter=contentType:${includeTypes.join(",")}`,
+			`fields=properties[$all]`
+		],
+		true);
+
+// console.log("PATHS:", data);
+	return data?.items.map((item:any) => {
+		return {
+			params: { path: item.route.path },
+			props: { item: item },
+		};
+	});
+}
+
+// CREATE MODEL DATA
+let model = import.meta.env.PRERENDER === 'true' ? Astro.props.item : await fetchItem(Astro.params.path, ["fields=properties[$all]"]);
+if (!model) return Astro.redirect('/404');
+
+// // TEMPLATE LOOP
+// async function resolveTemplate(contentType: string) {
+// 	const name = toPascalCase(contentType);
+// 	const path = `../Templates/pages/${name}.astro`;
+// 	const module = templates[path] as { default: unknown } | undefined;
+// 	if (!module) throw new Error(`Template not found for content type "${contentType}" — expected ${path}`);
+// 	return module.default;
+// }
+
+// // GET TEMPLATE
+// const Template = await resolveTemplate(model.contentType);
+
+---
+<Layout {model}>
+	{model ? (
+		<TemplateLoop {model}/>
+	) : (
+		<Fragment>Missing Model for {model?.contentType}</Fragment>
+	)}
+</Layout>

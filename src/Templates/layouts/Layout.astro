@@ -1,0 +1,26 @@
+---
+import { toSlug } from "../../js/helpers/helpers";
+// import "../../scss/global.scss";
+const { model = {} } = Astro.props;
+---
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width" />
+		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+		<link rel="icon" href="/favicon.ico" />
+		<meta name="generator" content={Astro.generator} />
+		<title>{model?.name || "Test"}</title>
+		<meta name="description" content={"Test"} />
+	</head>
+	<body>
+		<div class="site" data-template={model?.contentType} data-page={toSlug(model?.name)}>
+			<header class="site__header"></header>
+			<main class="site__main">
+				<slot />
+			</main>
+			<footer class="site__footer"></footer>
+		</div>
+	</body>
+</html>

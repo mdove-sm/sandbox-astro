@@ -1,0 +1,10 @@
+---
+import { fetchItem } from "@/lib/Umbraco.Query";
+import Error from "@/Templates/pages/Error.astro";
+import Layout from "@/Templates/layouts/Layout.astro";
+const model = await fetchItem("/404/", ["expand=properties[$all]"]);
+
+---
+<Layout {model}>
+	<Error {model} />
+</Layout>

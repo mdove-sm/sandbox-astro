@@ -1,0 +1,12 @@
+---
+// GET MODEL
+const { model } = Astro.props;
+
+
+const {content, settings} = model;
+---
+
+<div class="block" id={settings?.properties?.anchorTitle}>
+	<h3>Block: {content?.contentType}</h3>
+</div>
+
