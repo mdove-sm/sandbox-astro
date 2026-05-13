@@ -22,11 +22,7 @@ export default defineConfig({
 			},
 		},
 	},
-	// output: process.env.PRERENDER === "false" ? "static" : "server",
 	image: {
 		domains: ["astro.build", "https://localhost:44379"],
 	},
-	// adapter: node({
-	// 	mode: "standalone",
-	// }),
 });

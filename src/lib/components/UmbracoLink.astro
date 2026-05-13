@@ -1,3 +1,29 @@
 ---
+/* UMBRACO LINKS
+	Generates a link or button from umbraco data models
+
+	@model use one of the following data models:
+		- Url Picker (Content/Media/Manual)
+		- Content Picker (Content/Media)
+		- Document Picker (Document)
+
+	@type Element type (default a) (button/submit/span etc)
+	@target target attr (fallsback to data model)
+	@ariaLabel aria-label attr (optional)
+	£rest any valid html attr (including class and data)
+*/
+
+const { model, target, label, ariaLabel, ...rest} = Astro.props;
+
+let labelText = label ?? model?.title ?? model?.name;
+let href = model?.url ?? model?.route?.path;
+let windowTarget = target ?? model?.target ?? model?.extension ? "_blank" : "_self";
+let download = model.linkType == "Media" || model?.extension ? true : false;
+
+
 ---
-<a href=""></a>
+<a href={href} target={windowTarget} download={download} aria-label={ariaLabel} {...rest}>
+	<slot>
+		<span>{labelText}</span>
+	</slot>
+</a>

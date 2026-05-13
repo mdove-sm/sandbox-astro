@@ -1,6 +1,7 @@
 ---
 import type { LandingPageContentResponseModel } from "@/types";
 import BlocklistLoop from "@/Templates/layouts/BlocklistLoop.astro";
+import UmbracoLink from "@/lib/components/UmbracoLink.astro";
 interface Props {
 	model: LandingPageContentResponseModel;
 }
@@ -10,5 +11,12 @@ const { model } = Astro.props;
 <h1>{model.name} Page Title</h1>
 <h2>{model.contentType} Template</h2>
 {model.properties?.metaDescription && <p>{model.properties?.metaDescription}</p>}
-{model.properties?.metaDescription && <p>{model.properties?.metaDescription}</p>}
+<ul>
+	<li>Link Content: <UmbracoLink model={model.properties.linkPage[0]} label="Custom label" class:list={["btn", "btn-test"]} type="button" data-test="test" /></li>
+	<li>Link Manual: <UmbracoLink model={model.properties.linkManual[0]} /></li>
+	<li>Link Media: <UmbracoLink model={model.properties.linkFile[0]} /></li>
+	<li>ContentPicker Page: <UmbracoLink model={model.properties.contentPickerPage[0]} /></li>
+	<li>ContentPicker Media: <UmbracoLink model={model.properties.contentPickerMedia[0]} /></li>
+	<li>Document Picker: <UmbracoLink model={model.properties.documentPicker} /></li>
+</ul>
 {model.properties?.modules?.items?.length && <BlocklistLoop blocks={model.properties.modules.items} />}
