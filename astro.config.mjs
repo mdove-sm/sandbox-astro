@@ -1,7 +1,6 @@
 // @ts-check
 import { defineConfig } from 'astro/config';
 import path from "path";
-import node from "@astrojs/node";
 import mkcert from "vite-plugin-mkcert";
 import { loadEnv } from "vite";
 
@@ -19,6 +18,13 @@ export default defineConfig({
 		resolve: {
 			alias: {
 				"@": path.resolve("./src"),
+			},
+		},
+		css: {
+			preprocessorOptions: {
+				scss: {
+					loadPaths: ["node_modules"],
+				},
 			},
 		},
 	},

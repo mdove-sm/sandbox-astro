@@ -1,67 +1,82 @@
 ---
-import { addUmbracoHmac } from "@/lib/Umbraco.Media";
-interface CropCoordinates { x1: number; y1: number; x2: number; y2: number; }
-interface UmbracoCrop { alias: string; width: number; height: number; coordinates?: CropCoordinates; }
-interface UmbracoImage { url: string; width: number; height: number; name: string; focalPoint?: { left: number; top: number }; crops: UmbracoCrop[]; }
+import { addUmbracoHmac, srcSizes } from "@/lib/Umbraco.Media";
+import type { IApiMediaWithCropsModel } from "@/types/models/IApiMediaWithCropsModel";
+import type { ImageCropModel } from "@/types/models/ImageCropModel";
 
 interface Props {
-	image?: UmbracoImage;
+	/** The Umbraco media object returned by the Content Delivery API. */
+	image?: IApiMediaWithCropsModel;
+	/** Rendered width in pixels; defaults to the image's intrinsic width. */
 	width?: number;
+	/**
+	 * A `sizes` attribute string passed straight to the `<img>` element.
+	 * @example "(max-width: 768px) 100vw, 50vw"
+	 */
 	sizes?: string;
+	/** Alt text; falls back to `image.name` when omitted. */
 	alt?: string;
+	/** Crop alias defined in Umbraco. When supplied, the matching crop ratio and focal-point are used. */
 	crop?: string;
 	loading?: "lazy" | "eager";
 }
 
-const { image, width, sizes, alt, crop, loading} = Astro.props;
+const { image, width, sizes, alt, crop, loading } = Astro.props;
 
-if(!image?.url) return;
+if (!image?.url) return;
 
-const srcSizes = [100, 200, 320, 480, 640, 768, 960, 1024, 1280, 1440, 1920, 2560, 3200, 3500];
 let height: number | null = null;
-let srcSet: string[] = [];
+const srcSet: string[] = [];
 
+/**
+ * Resolves the correct image URL for a given display width, applying the named
+ * crop (if any) and signing the URL with an HMAC token.
+ *
+ * Side-effect: updates the module-level `height` variable so the rendered
+ * `<img>` always carries a matching intrinsic height.
+ */
+function getSrc(image: IApiMediaWithCropsModel, width: number, crop: string | undefined): string {
+	const resolvedCrop = crop
+		? (image.crops ?? []).find((x) => x.alias === crop) ?? null
+		: null;
 
-function getSrc(image: UmbracoImage, width: number, crop: string | undefined): string {
-
-	const resolvedCrop = crop ? image.crops.find((x) => x.alias == crop) ?? null : null;
-
-	let ratio = {
-		x: resolvedCrop ? resolvedCrop.width : image.width,
-		y: resolvedCrop ? resolvedCrop.height : image.height
-	}
+	const ratio = {
+		x: resolvedCrop ? resolvedCrop.width : (image.width ?? width),
+		y: resolvedCrop ? resolvedCrop.height : (image.height ?? width),
+	};
 
 	height = Math.round(width * (ratio.y / ratio.x));
 
-
 	const rxyString = resolvedCrop ? getFocalPoint(image, resolvedCrop) : null;
 
-	return addUmbracoHmac(`${import.meta.env.PUBLIC_MEDIA_DOMAIN}${image.url}?${rxyString ? "cc=" + rxyString + "&": ""}width=${width}&height=${height}`);
+	return addUmbracoHmac(
+		`${import.meta.env.PUBLIC_MEDIA_DOMAIN}${image.url}?${rxyString ? "cc=" + rxyString + "&" : ""}width=${width}&height=${height}`
+	);
 }
 
-srcSizes.forEach(size => {
-	let url = getSrc(image, size, crop);
-	srcSet.push(`${url} ${size}w`);
-})
-
-
-
-function getFocalPoint(image: UmbracoImage, crop: UmbracoCrop): string {
-
-	const focalPoint = image?.focalPoint || { left: 0.5, top: 0.5 };
+/**
+ * Calculates the crop-coordinate string (`x1,y1,x2,y2`) that Umbraco's image
+ * processor expects. Uses pre-defined coordinates when available; otherwise
+ * derives them from the image's focal point.
+ *
+ * All coordinate values are in the 0–1 range where (0,0) is the top-left
+ * corner. The x2/y2 values represent distance from the *bottom-right* corner,
+ * not the top-left.
+ */
+function getFocalPoint(image: IApiMediaWithCropsModel, crop: ImageCropModel): string {
+	const focalPoint = image.focalPoint ?? { left: 0.5, top: 0.5 };
 
 	let rxy = { x1: 0, y1: 0, x2: 0, y2: 0 };
 
-
-	if (crop?.coordinates) {
+	if (crop.coordinates) {
 		rxy = crop.coordinates;
 	} else {
-		const imageWidth = image.width;
-		const imageHeight = image.height;
+		// Non-null assertions are safe here: Umbraco always provides dimensions for media items.
+		const imageWidth = image.width!;
+		const imageHeight = image.height!;
 		const cropAspect = crop.width / crop.height;
 
 		// Calculate the crop dimensions in pixels, constrained to the source image
-		let cropW, cropH;
+		let cropW: number, cropH: number;
 		if (imageWidth / imageHeight > cropAspect) {
 			// Image is wider than crop aspect — fit height, derive width
 			cropH = imageHeight;
@@ -91,24 +106,28 @@ function getFocalPoint(image: UmbracoImage, crop: UmbracoCrop): string {
 		rxy = {
 			x1: x1px / imageWidth,
 			y1: y1px / imageHeight,
-			x2: 1 - (x2px / imageWidth),
-			y2: 1 - (y2px / imageHeight),
+			x2: 1 - x2px / imageWidth,
+			y2: 1 - y2px / imageHeight,
 		};
 	}
+
 	return `${rxy.x1},${rxy.y1},${rxy.x2},${rxy.y2}`;
 }
 
+srcSizes.forEach((size) => {
+	srcSet.push(`${getSrc(image, size, crop)} ${size}w`);
+});
 ---
 
 {image?.url &&
 	<img
 		alt={alt || image.name}
-		src={getSrc(image, width ?? image.width, crop)}
-		width={width || image.width}
-		height={height || image.height}
-		// srcset={srcSet.join(",")}
+		src={getSrc(image, width ?? image.width ?? 0, crop)}
+		width={width || image.width || undefined}
+		height={height || image.height || undefined}
+		srcset={srcSet.join(",")}
 		sizes={sizes || null}
-		loading={loading ||"lazy"}
+		loading={loading || "lazy"}
 		decoding="async"
 	/>
 }

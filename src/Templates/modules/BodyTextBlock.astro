@@ -1,4 +1,7 @@
 ---
+import Wysiwyg from "@/lib/components/Wysiwyg.astro";
+import { replaceTags } from "../ui/wysiwyg/rules";
+
 // GET MODEL
 const { model } = Astro.props;
 const {content, settings} = model;
@@ -6,5 +9,7 @@ const {content, settings} = model;
 
 <div class="block" id={settings?.properties?.anchorTitle}>
 	<h3>Block: {content?.contentType}</h3>
+	<!-- <Fragment set:html={content.properties.body.markup} /> -->
+	<Wysiwyg content={content.properties.body} rules={{...replaceTags([["h2", "h1"], ["h3", "h1"]])}} imgSizes="(max-width: 900px) 100w, 100w" />
 </div>
 

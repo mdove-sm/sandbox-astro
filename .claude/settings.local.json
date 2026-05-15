@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npx astro *)"
+      "Bash(npx astro *)",
+      "Bash(npm list *)",
+      "Bash(dir node_modules\\\\normalize.scss)"
     ]
   }
 }

@@ -2,27 +2,36 @@ import { getConfig } from "./Umbraco.Config.js";
 import crypto from "crypto";
 const config = getConfig();
 
-export function getImageheight(image, width, crop) {
-	return Math.round(image.height * (100 / image.width));
-}
+export const srcSizes = [
+	100, 200, 320, 480, 640, 768, 960, 1024, 1280, 1440, 1920, 2560, 3200, 3500,
+];
 
-export function getImgCrop(image, width, crop) {
-	const resolvedCrop = crop
-		? (image.crops.find((x) => x.alias == crop) ?? null)
-		: null;
+export function wysiwygImageLoader(node, imgSizes) {
+	const { src, width, height, alt } = node.attrs;
 
-	const ratio = {
-		x: resolvedCrop ? resolvedCrop.width : image.width,
-		y: resolvedCrop ? resolvedCrop.height : image.height,
-	};
+	let url = config.mediaDomain + src;
 
-	const height = Math.round(width * (ratio.y / ratio.x));
+	let srcSet = [];
 
-	const rxyString = resolvedCrop ? getFocalPoint(image, resolvedCrop) : null;
+	srcSizes.forEach((size) => {
+		let sizeUrl = new URL(url);
 
-	return addUmbracoHmac(
-		`${import.meta.env.PUBLIC_MEDIA_DOMAIN}${image.url}?${rxyString ? "cc=" + rxyString + "&" : ""}width=${width}&height=${height}`,
-	);
+		sizeUrl.searchParams.set("width", size);
+		sizeUrl.searchParams.set("height", Math.round(size * (height / width)));
+		sizeUrl.searchParams.delete("hmac");
+
+		srcSet.push(`${addUmbracoHmac(sizeUrl.toString())} ${size}w`);
+	});
+
+	return `<img
+		src="${url}"
+		width="${width}"
+		height="${height}"
+		srcset="${srcSet.join(",")}"
+		sizes="${imgSizes}"
+		alt="${alt}"
+		loading="lazy"
+	/>`;
 }
 
 export function addUmbracoHmac(url) {
@@ -84,3 +93,4 @@ function getFocalPoint(image, crop) {
 	}
 	return `${rxy.x1},${rxy.y1},${rxy.x2},${rxy.y2}`;
 }
+
