@@ -1,0 +1,69 @@
+---
+import UmbracoRte from "@/lib/components/UmbracoRte.astro";
+import UmbracoImage from "@/lib/components/UmbracoImage.astro";
+import UmbracoLink from "@/lib/components/UmbracoLink.astro";
+import type { ApiBlockItemModel } from "@/types/models/ApiBlockItemModel";
+import type { BlockSettingsElementModel } from "@/types/models/BlockSettingsElementModel";
+import type { QuoteBlockElementModel } from "@/types/models/QuoteBlockElementModel";
+import type { QuoteElementElementModel } from "@/types/models/QuoteElementElementModel";
+
+interface Props {
+	model: ApiBlockItemModel;
+}
+
+const { model } = Astro.props;
+const content = model.content as QuoteBlockElementModel;
+const settings = model.settings as BlockSettingsElementModel | undefined;
+const { title, introduction, links, items } = content.properties ?? {};
+---
+
+<div class="quote-block" id={settings?.properties?.anchorTitle}>
+	{title && <h2 class="quote-block__title">{title}</h2>}
+
+	{introduction && (
+		<div class="quote-block__introduction">
+			<UmbracoRte content={introduction} />
+		</div>
+	)}
+
+	{items?.items && items.items.length > 0 && (
+		<ul class="quote-block__items">
+			{items.items.map((item) => {
+				const quoteContent = item.content as QuoteElementElementModel;
+				const { quoteText, citation, citationDetails, image } = quoteContent.properties ?? {};
+				return (
+					<li class="quote-block__item">
+						<figure class="quote-block__figure">
+							<blockquote class="quote-block__quote">
+								{quoteText && <UmbracoRte content={quoteText} />}
+							</blockquote>
+							<figcaption class="quote-block__attribution">
+								{image?.[0] && (
+									<UmbracoImage
+										image={image[0]}
+										sizes="(max-width: 768px) 80px, 120px"
+										crop="portrait"
+									/>
+								)}
+								{citation && <span class="quote-block__citation">{citation}</span>}
+								{citationDetails && <span class="quote-block__citation-details">{citationDetails}</span>}
+							</figcaption>
+						</figure>
+					</li>
+				);
+			})}
+		</ul>
+	)}
+
+	{links && links.length > 0 && (
+		<ul class="quote-block__links">
+			{links.map((link) => (
+				<li class="quote-block__link-item">
+					<UmbracoLink model={link} class="quote-block__link btn">
+						<span>→</span><span>{link.title}</span>
+					</UmbracoLink>
+				</li>
+			))}
+		</ul>
+	)}
+</div>

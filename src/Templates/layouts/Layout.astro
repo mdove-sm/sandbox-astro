@@ -1,7 +1,17 @@
 ---
 import { toSlug } from "../../js/helpers/helpers";
 import "@/scss/global.scss";
+import { fetchContent } from "@/lib/Umbraco.Query";
+import UmbracoMeta from "@/lib/components/UmbracoMeta.astro";
+import type { SiteSettingsContentResponseModel } from "@/types/models/SiteSettingsContentResponseModel";
+
 const { model = {} } = Astro.props;
+
+const settingsData = await fetchContent([
+	"filter=contentType:siteSettings",
+	"fields=properties[$all]",
+]);
+const settings: SiteSettingsContentResponseModel | undefined = settingsData?.items?.[0];
 ---
 <!doctype html>
 <html lang="en">
@@ -11,8 +21,7 @@ const { model = {} } = Astro.props;
 		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 		<link rel="icon" href="/favicon.ico" />
 		<meta name="generator" content={Astro.generator} />
-		<title>{model?.name || "Test"}</title>
-		<meta name="description" content={"Test"} />
+		<UmbracoMeta model={model} settings={settings} />
 	</head>
 	<body>
 		<div class="site" data-template={model?.contentType} data-page={toSlug(model?.name)}>

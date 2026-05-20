@@ -14,14 +14,15 @@
 		"updateTypes": "node scripts/gen-types.mjs"
 	},
 	"dependencies": {
-		"astro": "^6.1.8",
+		"astro": "^6.3.5",
+		"astro-meta-tags": "^0.4.1",
 		"node-html-parser": "^7.1.0",
 		"normalize.scss": "^0.1.0",
 		"sass-embedded": "^1.99.0"
 	},
 	"devDependencies": {
 		"openapi-typescript-codegen": "^0.30.0",
-		"vite-plugin-mkcert": "^1.17.12",
+		"vite-plugin-mkcert": "^2.0.0",
 		"vite-plugin-sass": "^0.1.0"
 	}
 }

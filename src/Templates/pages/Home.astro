@@ -1,16 +1,26 @@
 ---
 import type { HomeContentResponseModel } from "@/types";
 import BlocklistLoop from "@/Templates/layouts/BlocklistLoop.astro";
-import UmbracoImage from "@/lib/components/UmbracoImage.astro";
+import UmbracoPicture from "@/lib/components/UmbracoPicture.astro";
 
 interface Props {
 	model: HomeContentResponseModel;
 }
 
 const { model } = Astro.props;
+const socialImage = model.properties?.socialImage?.[0];
 ---
 <h1>{model.name} Page</h1>
 <h2>{model.contentType} Template</h2>
-{model.properties?.socialImage?.length && <UmbracoImage image={model.properties?.socialImage[0]} width="600" crop="16-9" sizes="(max-width: 600px) 100w, 600px" />}
+{socialImage && (
+	<UmbracoPicture
+		sources={[
+			{ image: socialImage, crop: "16-9", media: "(min-width: 768px)", sizes: "600px" },
+			{ image: socialImage, crop: "1-1", media: "(max-width: 767px)", sizes: "200px" },
+		]}
+		width={200}
+		class:list={"media"}
+	/>
+)}
 {model.properties?.metaDescription && <p>{model.properties?.metaDescription}</p>}
 {model.properties?.modules?.items?.length && <BlocklistLoop blocks={model.properties.modules.items} />}

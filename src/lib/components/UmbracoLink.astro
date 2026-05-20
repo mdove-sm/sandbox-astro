@@ -13,10 +13,14 @@
 	£rest any valid html attr (including class and data)
 */
 
+import { getConfig } from '@/lib/Umbraco.Config.js';
+
+const { mediaDomain } = getConfig();
 const { model, target, label, ariaLabel, ...rest} = Astro.props;
 
 let labelText = label ?? model?.title ?? model?.name;
-let href = model?.url ?? model?.route?.path;
+let rawHref = model?.url ?? model?.route?.path;
+let href = model?.linkType === 'Media' || model?.extension ? `${mediaDomain}${rawHref}` : rawHref;
 let windowTarget = target ?? model?.target ?? model?.extension ? "_blank" : "_self";
 let download = model.linkType == "Media" || model?.extension ? true : false;
 

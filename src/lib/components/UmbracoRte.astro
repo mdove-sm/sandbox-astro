@@ -1,0 +1,36 @@
+---
+/**
+ * UmbracoRte
+ *
+ * Renders an Umbraco rich text field. Handles:
+ *   1. Tag transforms — e.g. making images responsive (default) or swapping tags (caller-supplied)
+ *   2. Inline blocks — `<umb-rte-block>` placeholders are replaced with matching Astro components
+ *      from `src/Templates/modules/inline/`, resolved by content type alias
+ *
+ * @prop {object}   content    - Umbraco rich text object: `{ markup: string, blocks: array }`
+ * @prop {object}   [rules]    - Map of `{ tagName: (node) => htmlString }`. Caller rules override
+ *                               defaults. Return `null`/`undefined` to leave the node unchanged.
+ * @prop {string}   [imgSizes] - `sizes` attribute passed to the image loader. Defaults to `"100vw"`.
+ */
+
+import { parseRteSegments } from "@/lib/Umbraco.Rte.js";
+
+const { content, rules = {}, imgSizes = "100vw", ...rest } = Astro.props;
+
+if (!content?.markup) return;
+
+const segments = parseRteSegments(content, rules, imgSizes);
+---
+
+<Fragment>
+	{segments.map((seg) => {
+		if (seg.type === "html") return <Fragment set:html={seg.content} />;
+
+		if (seg.type === "block" && seg.component) {
+			const Component = seg.component;
+			return <Component model={seg.blockData} />;
+		}
+
+		return null;
+	})}
+</Fragment>

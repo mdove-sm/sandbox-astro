@@ -1,9 +1,8 @@
 ---
-import { addUmbracoHmac, srcSizes } from "@/lib/Umbraco.Media";
+import { buildSrc, buildSrcSet } from "@/lib/Umbraco.Media";
 import type { IApiMediaWithCropsModel } from "@/types/models/IApiMediaWithCropsModel";
-import type { ImageCropModel } from "@/types/models/ImageCropModel";
 
-interface Props {
+interface Props extends astroHTML.JSX.ImgHTMLAttributes {
 	/** The Umbraco media object returned by the Content Delivery API. */
 	image?: IApiMediaWithCropsModel;
 	/** Rendered width in pixels; defaults to the image's intrinsic width. */
@@ -20,114 +19,25 @@ interface Props {
 	loading?: "lazy" | "eager";
 }
 
-const { image, width, sizes, alt, crop, loading } = Astro.props;
+const { image, width, sizes, alt, crop, loading, ...rest } = Astro.props;
 
 if (!image?.url) return;
 
-let height: number | null = null;
-const srcSet: string[] = [];
-
-/**
- * Resolves the correct image URL for a given display width, applying the named
- * crop (if any) and signing the URL with an HMAC token.
- *
- * Side-effect: updates the module-level `height` variable so the rendered
- * `<img>` always carries a matching intrinsic height.
- */
-function getSrc(image: IApiMediaWithCropsModel, width: number, crop: string | undefined): string {
-	const resolvedCrop = crop
-		? (image.crops ?? []).find((x) => x.alias === crop) ?? null
-		: null;
-
-	const ratio = {
-		x: resolvedCrop ? resolvedCrop.width : (image.width ?? width),
-		y: resolvedCrop ? resolvedCrop.height : (image.height ?? width),
-	};
-
-	height = Math.round(width * (ratio.y / ratio.x));
-
-	const rxyString = resolvedCrop ? getFocalPoint(image, resolvedCrop) : null;
-
-	return addUmbracoHmac(
-		`${import.meta.env.PUBLIC_MEDIA_DOMAIN}${image.url}?${rxyString ? "cc=" + rxyString + "&" : ""}width=${width}&height=${height}`
-	);
-}
-
-/**
- * Calculates the crop-coordinate string (`x1,y1,x2,y2`) that Umbraco's image
- * processor expects. Uses pre-defined coordinates when available; otherwise
- * derives them from the image's focal point.
- *
- * All coordinate values are in the 0–1 range where (0,0) is the top-left
- * corner. The x2/y2 values represent distance from the *bottom-right* corner,
- * not the top-left.
- */
-function getFocalPoint(image: IApiMediaWithCropsModel, crop: ImageCropModel): string {
-	const focalPoint = image.focalPoint ?? { left: 0.5, top: 0.5 };
-
-	let rxy = { x1: 0, y1: 0, x2: 0, y2: 0 };
-
-	if (crop.coordinates) {
-		rxy = crop.coordinates;
-	} else {
-		// Non-null assertions are safe here: Umbraco always provides dimensions for media items.
-		const imageWidth = image.width!;
-		const imageHeight = image.height!;
-		const cropAspect = crop.width / crop.height;
-
-		// Calculate the crop dimensions in pixels, constrained to the source image
-		let cropW: number, cropH: number;
-		if (imageWidth / imageHeight > cropAspect) {
-			// Image is wider than crop aspect — fit height, derive width
-			cropH = imageHeight;
-			cropW = cropH * cropAspect;
-		} else {
-			// Image is taller than crop aspect — fit width, derive height
-			cropW = imageWidth;
-			cropH = cropW / cropAspect;
-		}
-
-		// Calculate ideal crop origin (in pixels) to centre the focal point
-		const focalX = focalPoint.left * imageWidth;
-		const focalY = focalPoint.top * imageHeight;
-
-		let x1px = focalX - cropW / 2;
-		let y1px = focalY - cropH / 2;
-
-		// Clamp so the crop doesn't exceed image bounds
-		x1px = Math.max(0, Math.min(x1px, imageWidth - cropW));
-		y1px = Math.max(0, Math.min(y1px, imageHeight - cropH));
-
-		const x2px = x1px + cropW;
-		const y2px = y1px + cropH;
-
-		// Convert pixel positions to the 0–1 coordinate space Umbraco expects
-		// x1/y1 = distance from top-left, x2/y2 = distance from bottom-right
-		rxy = {
-			x1: x1px / imageWidth,
-			y1: y1px / imageHeight,
-			x2: 1 - x2px / imageWidth,
-			y2: 1 - y2px / imageHeight,
-		};
-	}
-
-	return `${rxy.x1},${rxy.y1},${rxy.x2},${rxy.y2}`;
-}
-
-srcSizes.forEach((size) => {
-	srcSet.push(`${getSrc(image, size, crop)} ${size}w`);
-});
+const displayWidth = width ?? image.width ?? 0;
+const { src, height } = buildSrc(image, displayWidth, crop);
+const srcset = buildSrcSet(image, crop);
 ---
 
 {image?.url &&
 	<img
 		alt={alt || image.name}
-		src={getSrc(image, width ?? image.width ?? 0, crop)}
+		src={src}
 		width={width || image.width || undefined}
 		height={height || image.height || undefined}
-		srcset={srcSet.join(",")}
+		srcset={srcset}
 		sizes={sizes || null}
 		loading={loading || "lazy"}
 		decoding="async"
+		{...rest}
 	/>
 }

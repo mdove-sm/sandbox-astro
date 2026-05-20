@@ -3,7 +3,9 @@
     "allow": [
       "Bash(npx astro *)",
       "Bash(npm list *)",
-      "Bash(dir node_modules\\\\normalize.scss)"
+      "Bash(dir node_modules\\\\normalize.scss)",
+      "Bash(Remove-Item \"c:\\\\Users\\\\michaeldove\\\\Localhost\\\\111-sandbox-astro\\\\src\\\\lib\\\\components\\\\Wysiwyg.astro\")",
+      "Bash(node -e \"require\\('node-html-parser'\\)\")"
     ]
   }
 }

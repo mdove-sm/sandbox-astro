@@ -1,0 +1,121 @@
+---
+import { buildSrc, buildSrcSet, srcSizes } from "@/lib/Umbraco.Media";
+import type { IApiMediaWithCropsModel } from "@/types/models/IApiMediaWithCropsModel";
+
+export interface SourceItem {
+	/** The Umbraco media object returned by the Content Delivery API. */
+	image: IApiMediaWithCropsModel;
+	/** Crop alias defined in Umbraco. */
+	crop?: string;
+	/**
+	 * A `sizes` attribute string passed to the `<source>` element.
+	 * @example "(max-width: 768px) 100vw, 50vw"
+	 */
+	sizes?: string;
+	/**
+	 * Media query that activates this source.
+	 * @example "(min-width: 1024px)"
+	 */
+	media?: string;
+}
+
+interface Props extends astroHTML.JSX.HTMLAttributes {
+	/**
+	 * Ordered list of sources, each mapping to a `<source>` element.
+	 * List from largest breakpoint to smallest; the last item is used as the `<img>` fallback.
+	 */
+	sources: SourceItem[];
+	/** Alt text for the fallback `<img>`. Falls back to the last source's image name. */
+	alt?: string;
+	/** Rendered width (px) for the fallback `<img>`. Defaults to the image's intrinsic width. */
+	width?: number;
+	loading?: "lazy" | "eager";
+}
+
+const { sources, alt, width, loading = "lazy", ...rest } = Astro.props;
+
+if (!sources?.length || !sources.some((s) => s.image?.url)) return;
+
+const DPR_CAP = 2;
+
+/**
+ * Extracts the maximum rendered image width in CSS pixels from a sizes string.
+ * Only the last (default) term is inspected — media-conditioned terms are ignored
+ * since the source's own media query already gates which viewport widths apply.
+ * - "600px"  → 600
+ * - "50vw"   → viewportMax × 0.5
+ * - anything else (calc etc.) → viewportMax as a safe fallback
+ */
+function parseSizesMaxPx(sizes: string, viewportMax: number): number {
+	const defaultTerm = sizes.split(",").at(-1)!.trim();
+	const pxMatch = defaultTerm.match(/^([\d.]+)px$/i);
+	if (pxMatch) return parseFloat(pxMatch[1]);
+	const vwMatch = defaultTerm.match(/^([\d.]+)vw$/i);
+	if (vwMatch) return viewportMax * (parseFloat(vwMatch[1]) / 100);
+	return viewportMax;
+}
+
+/**
+ * Narrows srcSizes to widths that are plausible for a given source.
+ * - min-width: X  →  drop sizes below X/2 (smallest plausible image at the min viewport)
+ * - sizes / max-width  →  find the physical pixel ceiling (renderedMax × DPR_CAP) and keep
+ *   up to and including the first srcSize that meets it, so the browser always has a match.
+ */
+function filterSrcSizes(media: string | undefined, sizes: string | undefined): number[] {
+	const minMatch = media?.match(/min-width:\s*(\d+)px/i);
+	const maxMatch = media?.match(/max-width:\s*(\d+)px/i);
+
+	const minPx = minMatch ? parseInt(minMatch[1], 10) : 0;
+	const maxPx = maxMatch ? parseInt(maxMatch[1], 10) : Infinity;
+
+	if (minPx === 0 && maxPx === Infinity && !sizes) return srcSizes;
+
+	// Bound the viewport for vw calculations: media max-width, or 4K as a ceiling
+	const viewportCeiling = maxPx < Infinity ? maxPx : 3840;
+	const renderedMax = sizes ? parseSizesMaxPx(sizes, viewportCeiling) : viewportCeiling;
+	const physicalMax = renderedMax * DPR_CAP;
+
+	// Keep up to and including the first srcSize that satisfies physicalMax,
+	// ensuring the browser always has an entry at or above the size it needs.
+	const ceilIndex = srcSizes.findIndex((s) => s >= physicalMax);
+	const maxSize = ceilIndex !== -1 ? srcSizes[ceilIndex] : Infinity;
+
+	const lowerBound = minPx > 0 ? Math.floor(minPx / 2) : 0;
+
+	return srcSizes.filter((size) => size >= lowerBound && size <= maxSize);
+}
+
+const fallback = sources[sources.length - 1];
+const fallbackWidth = width ?? fallback.image.width ?? 0;
+const { src: fallbackSrc, height: fallbackHeight } = fallback.image?.url
+	? buildSrc(fallback.image, fallbackWidth, fallback.crop)
+	: { src: null, height: null };
+
+const srcSets = sources.map(({ image, crop, media, sizes }) =>
+	image?.url ? buildSrcSet(image, crop, filterSrcSizes(media, sizes)) : null
+);
+---
+
+<picture {...rest}>
+	{sources.map(({ image, sizes, media }, i) =>
+		image?.url ? (
+			<source
+				srcset={srcSets[i]!}
+				sizes={sizes || null}
+				media={media || null}
+			/>
+		) : null
+	)}
+	{fallbackSrc && (
+		<img
+			src={fallbackSrc}
+			srcset={srcSets[sources.length - 1] || null}
+			sizes={fallback.sizes || null}
+			alt={alt || fallback.image.name}
+			width={fallbackWidth || fallback.image.width || undefined}
+			height={fallbackHeight || fallback.image.height || undefined}
+			loading={loading}
+			decoding="async"
+		/>
+	)}
+</picture>

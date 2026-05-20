@@ -1,1 +1,8 @@
+@forward "./utilities/cascade-layers"; // Activate cascade layers
 @forward "base/"; // Reest and styles for basic elements
+// @forward "components/"; // Custom construction components
+@layer base {
+	a {
+		text-decoration: underline;
+	}
+}

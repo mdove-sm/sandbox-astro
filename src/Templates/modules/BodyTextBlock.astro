@@ -1,15 +1,19 @@
 ---
-import Wysiwyg from "@/lib/components/Wysiwyg.astro";
-import { replaceTags } from "../ui/wysiwyg/rules";
+import UmbracoRte from "@/lib/components/UmbracoRte.astro";
+import { replaceTags } from "@/lib/Umbraco.Rte";
+import { toSlug } from "@/js/helpers/helpers";
 
 // GET MODEL
 const { model } = Astro.props;
 const {content, settings} = model;
 ---
 
-<div class="block" id={settings?.properties?.anchorTitle}>
-	<h3>Block: {content?.contentType}</h3>
-	<!-- <Fragment set:html={content.properties.body.markup} /> -->
-	<Wysiwyg content={content.properties.body} rules={{...replaceTags([["h2", "h1"], ["h3", "h1"]])}} imgSizes="(max-width: 900px) 100w, 100w" />
+<div class="block bodyText" id={toSlug(settings?.properties?.anchorTitle)} data-anchor={settings?.properties?.anchorTitle}>
+	<UmbracoRte
+		content={content.properties.body}
+		rules={{
+			...replaceTags([["h2", "h1"], ["strong", "em"]])
+		}}
+		imgSizes="(max-width: 900px) 100w, 100w" />
 </div>
 

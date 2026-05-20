@@ -1,0 +1,55 @@
+---
+import type { IApiContentResponseModel } from "@/types/models/IApiContentResponseModel";
+import type { SiteSettingsContentResponseModel } from "@/types/models/SiteSettingsContentResponseModel";
+import type { IApiMediaWithCropsModel } from "@/types/models/IApiMediaWithCropsModel";
+import { buildSrc } from "@/lib/Umbraco.Media";
+
+interface Props {
+	/** Current page content model. */
+	model: IApiContentResponseModel;
+	/** Global site settings — used as fallback for social image. */
+	settings?: SiteSettingsContentResponseModel;
+}
+
+const { model, settings } = Astro.props;
+
+const props = model?.properties ?? {};
+const settingsProps = settings?.properties ?? {};
+
+const title = props.metaTitle || model?.name || "";
+const description: string = props.metaDescription || "";
+const keywords: string = props.metaKeywords || "";
+
+const pageImage: IApiMediaWithCropsModel | undefined = Array.isArray(props.socialImage)
+	? props.socialImage[0]
+	: props.socialImage;
+
+const fallbackImage: IApiMediaWithCropsModel | undefined = Array.isArray(settingsProps.socialShareImage)
+	? settingsProps.socialShareImage[0]
+	: settingsProps.socialShareImage;
+
+const socialImage = pageImage ?? fallbackImage;
+const ogImageUrl = socialImage?.url ? buildSrc(socialImage, 1200).src : undefined;
+
+const canonicalUrl = Astro.url.href;
+---
+
+<title>{title}</title>
+<meta name="description" content={description} />
+{keywords && <meta name="keywords" content={keywords} />}
+<link rel="canonical" href={canonicalUrl} />
+
+<!-- Open Graph -->
+<meta property="og:type" content="website" />
+<meta property="og:url" content={canonicalUrl} />
+<meta property="og:title" content={title} />
+{description && <meta property="og:description" content={description} />}
+{ogImageUrl && <meta property="og:image" content={ogImageUrl} />}
+{ogImageUrl && <meta property="og:image:width" content="1200" />}
+
+<!-- Twitter / X -->
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:url" content={canonicalUrl} />
+<meta name="twitter:title" content={title} />
+{description && <meta name="twitter:description" content={description} />}
+{ogImageUrl && <meta name="twitter:image" content={ogImageUrl} />}
