@@ -15,7 +15,7 @@
 
 import { parseRteSegments } from "@/lib/Umbraco.Rte.js";
 
-const { content, rules = {}, imgSizes = "100vw", ...rest } = Astro.props;
+const { content, rules = {}, imgSizes = "100vw" } = Astro.props;
 
 if (!content?.markup) return;
 
